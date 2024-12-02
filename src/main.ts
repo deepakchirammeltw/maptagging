@@ -62,6 +62,9 @@ class MapTaggingComponent {
   }
 
   private drawGeofenceBoundary(boundingBox: { top: number, left: number, width: number, height: number }): void {
+    if (this.rect != null) {
+      this.canvas.remove(this.rect);
+    }
     this.rect = new fabric.Rect({
       angle: 0,
       fill: 'transparent',
@@ -76,7 +79,7 @@ class MapTaggingComponent {
       width: boundingBox.width,
       height: boundingBox.height
     });
-    this.rect.on('mouseup:before', () => {
+    this.rect.on('mouseup:before', (): void => {
       let rect = this.rect!!;
       this.setupNewBoundary(rect);
     });
@@ -96,11 +99,10 @@ class MapTaggingComponent {
     this.boundingBox.left = rect.left;
     this.boundingBox.width = rect.width;
     this.boundingBox.height = rect.height;
-    console.log(this.boundingBox);
     this.populateGeofenceCoords(rect.getCoords());
   }
 
-  private populateGeofenceCoords(coords: Point[]) {
+  private populateGeofenceCoords(coords: Point[]): void {
     let pointA: { latitude: number, longitude: number } = {
       latitude: this.mapCoords.topLeft.latitude - ((this.mapCoords.topLeft.latitude - this.mapCoords.bottomLeft.latitude) * coords[0].y / 400),
       longitude: this.mapCoords.topLeft.longitude + (((this.mapCoords.topRight.longitude - this.mapCoords.topLeft.longitude)) * coords[0].x / 800)
@@ -121,9 +123,11 @@ class MapTaggingComponent {
     this.onGeofenceCoordsModified();
   }
 
-  public onGeofenceCoordsModified() {
+  public onGeofenceCoordsModified(): void {
     //TODO: Save to UDS->LDM DB and reflect in config_policy
+    console.log('onGeofenceCoordsModified::');
     console.log(this.geofenceCoords);
+    console.log(this.boundingBox);
   }
 
   private populateBoundingBox(geofence: {
@@ -131,12 +135,51 @@ class MapTaggingComponent {
     pointB: { latitude: number; longitude: number },
     pointC: { latitude: number; longitude: number },
     pointD: { latitude: number; longitude: number }
-  }) {
-    //TODO, if co-ordinates previously set
+  }): void {
+    // validate first that the co-ordinates are within the map boundary
+    if (geofence.pointA.latitude <= this.mapCoords.topLeft.latitude &&
+      geofence.pointA.latitude >= this.mapCoords.bottomLeft.latitude &&
+      geofence.pointA.longitude >= this.mapCoords.topLeft.longitude &&
+      geofence.pointA.longitude <= this.mapCoords.topRight.longitude &&
+      geofence.pointB.latitude <= this.mapCoords.topLeft.latitude &&
+      geofence.pointB.latitude >= this.mapCoords.bottomLeft.latitude &&
+      geofence.pointB.longitude >= this.mapCoords.topLeft.longitude &&
+      geofence.pointB.longitude <= this.mapCoords.topRight.longitude &&
+      geofence.pointC.latitude <= this.mapCoords.topLeft.latitude &&
+      geofence.pointC.latitude >= this.mapCoords.bottomLeft.latitude &&
+      geofence.pointC.longitude >= this.mapCoords.topLeft.longitude &&
+      geofence.pointC.longitude <= this.mapCoords.topRight.longitude &&
+      geofence.pointD.latitude <= this.mapCoords.topLeft.latitude &&
+      geofence.pointD.latitude >= this.mapCoords.bottomLeft.latitude &&
+      geofence.pointD.longitude >= this.mapCoords.topLeft.longitude &&
+      geofence.pointD.longitude <= this.mapCoords.topRight.longitude) {
+      this.boundingBox.top = ((this.mapCoords.topLeft.latitude - geofence.pointA.latitude) / (this.mapCoords.topLeft.latitude - this.mapCoords.bottomLeft.latitude)) * 400;
+      this.boundingBox.left = ((geofence.pointA.longitude - this.mapCoords.topLeft.longitude) / (this.mapCoords.topRight.longitude - this.mapCoords.topLeft.longitude)) * 800;
+      this.boundingBox.width = (((geofence.pointB.longitude - this.mapCoords.topLeft.longitude) / (this.mapCoords.topRight.longitude - this.mapCoords.topLeft.longitude)) * 800) - this.boundingBox.left;
+      this.boundingBox.height = (((this.mapCoords.topLeft.latitude - geofence.pointD.latitude) / (this.mapCoords.topLeft.latitude - this.mapCoords.bottomLeft.latitude)) * 400) - this.boundingBox.top;
+    }
   }
 }
 
 let mapTaggingComponent: MapTaggingComponent = new MapTaggingComponent();
+// let geofenceCoords = {
+//   "pointA": {
+//     "latitude": 17.42560132747525,
+//     "longitude": 78.33679400012024
+//   },
+//   "pointB": {
+//     "latitude": 17.42560132747525,
+//     "longitude": 78.33796270830845
+//   },
+//   "pointC": {
+//     "latitude": 17.424770990207723,
+//     "longitude": 78.33796270830845
+//   },
+//   "pointD": {
+//     "latitude": 17.424770990207723,
+//     "longitude": 78.33679400012024
+//   }
+// };
 let geofenceCoords = null; //provide geofenceCoords: {
 //     pointA: { latitude: number; longitude: number },
 //     pointB: { latitude: number; longitude: number },
